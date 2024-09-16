@@ -133,7 +133,9 @@ Resources:
       TemplateURL: !Sub https://${S3BucketName}.s3.amazonaws.com/vpc.yaml
       TimeoutInMinutes: 20
       Parameters:
-        AvailabilityZones: !Ref AvailabilityZones
+        AvailabilityZones: !Join
+          - ","
+          - !Ref AvailabilityZones
         VPCName: !Ref VPCName
         VPCCidr: !Ref VPCCidr
         PublicSubnetName: !Ref PublicSubnetName
@@ -161,6 +163,7 @@ Resources:
         DBSubnetGroupName: !Sub "${VPCName}-dwh-${Environment}-int"
         DBParameterGroupName: !Sub "${DBInstanceID}-${Environment}-int"
         DBOptionGroupName: !Sub "${DBInstanceID}-${Environment}-int"
+    DependsOn: VpcStack
 
   # IamStack:
   #   Type: AWS::CloudFormation::Stack

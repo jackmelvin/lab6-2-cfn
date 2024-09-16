@@ -4,7 +4,7 @@ Description: AWS CloudFormation workshop - Nested stacks - VPC template.
 
 Parameters:
   AvailabilityZones:
-    Type: List<AWS::EC2::AvailabilityZone::Name>
+    Type: CommaDelimitedList
     Description: The list of Availability Zones to use for the subnets in the VPC.
 
   VPCName:
@@ -112,13 +112,6 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId:
         Ref: VPCIGW
-  PublicRoute2:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId:
-        Ref: VPCPublicSubnetRouteTable
-      DestinationCidrBlock: !Ref VPCCidr
-      GatewayId: "local"
 
   # Public Subnet Route Table Association
   VPCPublicSubnetRouteTableAssociation:
@@ -145,13 +138,6 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId:
         Ref: VPNGateway
-  PrivateRoute2:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId:
-        Ref: VPCPrivateSubnet1RouteTable
-      DestinationCidrBlock: !Ref VPCCidr
-      GatewayId: "local"
 
   # Private Subnet #1 Route Table Association
   VPCPrivateSubnet1RouteTableAssociation:
@@ -170,7 +156,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Ref PrivateSubnet2Name
-  PrivateRoute3:
+  PrivateRoute2:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId:
@@ -178,13 +164,6 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId:
         Ref: VPNGateway
-  PrivateRoute4:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId:
-        Ref: VPCPrivateSubnet2RouteTable
-      DestinationCidrBlock: !Ref VPCCidr
-      GatewayId: "local"
 
   # Private Subnet #2 Route Table Association
   VPCPrivateSubnet2RouteTableAssociation:
@@ -204,7 +183,7 @@ Resources:
           Value: !Ref VPCName
 
   # Internet Gateway Attachment
-  VPCGW:
+  VPCIGWAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId:
@@ -277,6 +256,14 @@ Resources:
     Type: AWS::EC2::VPNGateway
     Properties:
       Type: ipsec.1
+
+  VPCVGWAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC
+      VpnGatewayId:
+        Ref: VPNGateway
 
   # Virtual Private Gateway Route Propagation
   VPNGatewayRoutePropagationPublicRt:
