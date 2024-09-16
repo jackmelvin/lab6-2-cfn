@@ -38,10 +38,6 @@ Parameters:
   AvailabilityZone:
     Description: DB Instance AZ
     Type: AWS::EC2::AvailabilityZone::Name
-    AllowedValues:
-      - ap-northeast-3a
-      - ap-northeast-3b
-      - ap-northeast-3c
   DBAllocatedStorage:
     Default: "20"
     Description: The size of the database (GiB)

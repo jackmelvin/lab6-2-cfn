@@ -133,9 +133,7 @@ Resources:
       TemplateURL: !Sub https://${S3BucketName}.s3.amazonaws.com/vpc.yaml
       TimeoutInMinutes: 20
       Parameters:
-        AvailabilityZones: !Join
-          - ","
-          - !Ref AvailabilityZones
+        AvailabilityZones: !Ref AvailabilityZones
         VPCName: !Ref VPCName
         VPCCidr: !Ref VPCCidr
         PublicSubnetName: !Ref PublicSubnetName
