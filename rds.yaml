@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >-
+  Description": "AWS CloudFormation Sample Template for creating an Amazon RDS DB instance: 
+  Sample template showing how to create a DB instance with Enhanced Monitoring enabled. 
+  **WARNING** This template creates an RDS DB instance. You will be billed for the AWS 
+  resources used if you create a stack from this template.
+
+Parameters:
+  DBInstanceID:
+    Default: wodwhora
+    Description: DB Instance ID
+    Type: String
+    MinLength: "1"
+    MaxLength: "63"
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription: >-
+      Must begin with a letter and must not end with a hyphen or contain two
+      consecutive hyphens.
+  DBName:
+    Default: WODWHORA
+    Description: DB Instance Name
+    Type: String
+    MinLength: "1"
+    MaxLength: "64"
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
+  DBInstanceClass:
+    Default: db.t2.micro
+    Description: DB instance class
+    Type: String
+    ConstraintDescription: Must select a valid DB instance type.
+    AllowedValues:
+      - db.t2.micro
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+  AvailabilityZone:
+    Description: DB Instance AZ
+    Type: AWS::EC2::AvailabilityZone::Name
+    AllowedValues:
+      - ap-northeast-3a
+      - ap-northeast-3b
+      - ap-northeast-3c
+  DBAllocatedStorage:
+    Default: "20"
+    Description: The size of the database (GiB)
+    Type: Number
+    MinValue: "20"
+    MaxValue: "65536"
+    ConstraintDescription: must be between 20 and 65536 GiB.
+  DBUsername:
+    NoEcho: "true"
+    Description: Username for MySQL database access
+    Type: String
+    MinLength: "1"
+    MaxLength: "16"
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  DBPassword:
+    NoEcho: "true"
+    Description: Password MySQL database access
+    Type: String
+    MinLength: "8"
+    MaxLength: "41"
+    AllowedPattern: "[a-zA-Z0-9]*"
+    ConstraintDescription: must contain only alphanumeric characters.
+  StorageType:
+    Default: gp3
+    Description: Storage Type
+    Type: String
+  Timezone:
+    Default: Asia/Tokyo
+    Description: Timezone
+    Type: String
+  DBSubnetGroupName:
+    Default: dwh01-osaka-dwh-prod-int
+    Description: DB Subnet Group Name
+    Type: String
+  DBParameterGroupName:
+    Default: wodwhora-prod-int
+    Description: DB Parameter Group Name
+    Type: String
+  DBOptionGroupName:
+    Default: wodwhora-prod-int
+    Description: DB Option Group Name
+    Type: String
+
+Resources:
+  Wodwhora:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: !Ref DBAllocatedStorage
+      AutoMinorVersionUpgrade: false
+      AvailabilityZone: !Ref AvailabilityZone
+      CACertificateIdentifier: rds-ca-2019
+      CharacterSetName: JA16SJISTILDE
+      DBInstanceClass: !Ref DBInstanceClass
+      DBInstanceIdentifier: !Ref DBInstanceID
+      DBName: !Ref DBName
+      DBParameterGroupName: !Ref DBParameterGroup
+      PubliclyAccessible: false
+      DBSubnetGroupName: !Ref DBSubnetGroupName
+      DedicatedLogVolume: false
+      DeletionProtection: true
+      EnableIAMDatabaseAuthentication: false
+      EnablePerformanceInsights: false
+      Engine: oracle-se2-cdb
+      EngineLifecycleSupport: String
+      EngineVersion: 19.0.0.0.ru-2023-04.rur-2023-04.r1
+      LicenseModel: license-included
+      ManageMasterUserPassword: true
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      MultiAZ: false
+      NcharCharacterSetName: JA16SJISTILDE
+      NetworkType: IPv4
+      OptionGroupName: !Ref DBOptionGroupName
+      Port: "1521"
+      StorageEncrypted: false
+      StorageType: !Ref StorageType
+      Tags:
+        - Key: Name
+          Value: !Ref DBName
+      VPCSecurityGroups:
+        - !ImportValue DatabaseSG
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Ref DBSubnetGroupName
+      SubnetIds:
+        - !ImportValue PrivateSubnet1Id
+        - !ImportValue PrivateSubnet2Id
+      Tags:
+        - Key: Name
+          Value: !Ref DBSubnetGroupName
+
+  DBParameterGroup:
+    Type: "AWS::RDS::DBParameterGroup"
+    Properties:
+      DBParameterGroupName: !Ref DBParameterGroupName
+      Description: !Ref DBParameterGroupName
+      Family: oracle-se2-cdb-19
+
+  DBOptionGroup:
+    Type: AWS::RDS::OptionGroup
+    Properties:
+      EngineName: oracle-se2-cdb
+      MajorEngineVersion: "19"
+      OptionConfigurations:
+        - OptionName: Timezone
+          OptionSettings:
+            - Name: TIMEZONE
+              Value: !Ref Timezone
+        - OptionName: STATSPACK
+      OptionGroupDescription: !Ref DBOptionGroupName
+      OptionGroupName: !Ref DBOptionGroupName
