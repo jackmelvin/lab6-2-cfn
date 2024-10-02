@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation template for WEBFOCUS EC2 instance
+
+Parameters:
+  AvailabilityZones:
+    Description: The list of Availability Zones to use for the subnets in the VPC.
+    Type: List<AWS::EC2::AvailabilityZone::Name>
+  # WebfocusSubnetId:
+  #   Type: String
+  # BastionHostSubnetId:
+  #   Type: String
+  KeyName:
+    Type: String
+    Default: WEBFOCUS
+    Description: Name of the key pair for SSH access
+  # WebfocusSecurityGroup:
+  #   Type: String
+  #   Description: Security Group ID for the EC2 instance
+  # BastionSecurityGroup:
+  #   Type: String
+  # DWHEC2WEBFOCUSRole:
+  #   Type: String
+  #   Description: IAM role associated with the EC2 instance
+  InstanceType:
+    Type: String
+    Default: t2.micro
+  WebfocusInstanceName:
+    Type: String
+    Default: WEBFOCUS
+  BastionHostInstanceName:
+    Type: String
+    Default: BASTION
+  WebfocusAmiId:
+    Type: AWS::EC2::Image::Id
+    Default: ami-0888db1202897905c
+  BastionHostAmiId:
+    Type: AWS::EC2::Image::Id
+    Default: ami-0888db1202897905c
+
+Resources:
+  WebfocusInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref WebfocusAmiId
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref WebfocusInstanceProfile
+      SubnetId: !ImportValue PrivateSubnet1Id
+      SecurityGroupIds:
+        - !ImportValue WebfocusSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Ref WebfocusInstanceName
+      Monitoring: true
+      DisableApiTermination: false
+
+  BastionHostInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref BastionHostAmiId
+      KeyName: !Ref KeyName
+      SubnetId: !ImportValue PublicSubnetId
+      SecurityGroupIds:
+        - !ImportValue BastionSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Ref BastionHostInstanceName
+      Monitoring: true
+      DisableApiTermination: false
+
+  WebfocusInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "${WebfocusInstanceName}-profile"
+      Roles:
+        - !ImportValue DWHEC2WEBFOCUSRole
+
+  WebfocusInstanceEBSVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !Select [0, !Ref AvailabilityZones]
+      Size: 8
+      VolumeType: gp2
+      Encrypted: false
+      Tags:
+        - Key: Name
+          Value: WEBFOCUS-Volume
+
+  BastionHostInstanceEBSVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !Select [1, !Ref AvailabilityZones]
+      Size: 8
+      VolumeType: gp2
+      Encrypted: false
+      Tags:
+        - Key: Name
+          Value: WEBFOCUS-Volume
+
+  WebFocusAttachVolume:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: !Ref WebfocusInstance
+      VolumeId: !Ref WebfocusInstanceEBSVolume
+      Device: /dev/sda1
+
+  BastionHostAttachVolume:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: !Ref BastionHostInstance
+      VolumeId: !Ref BastionHostInstanceEBSVolume
+      Device: /dev/sda1
+
+  BastionHostEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: !ImportValue VpcId
+      InstanceId: !Ref BastionHostInstance
+
+Outputs:
+  WebfocusInstanceId:
+    Description: The Instance ID of the newly created EC2 instance
+    Value: !Ref WebfocusInstance
+    Export:
+      Name: WebfocusInstanceId
+
+  BastionHostInstanceId:
+    Description: InstanceId of the bastion host
+    Value: !Ref BastionHostInstance
+    Export:
+      Name: BastionHostInstance

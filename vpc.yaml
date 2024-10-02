@@ -132,6 +132,9 @@ Resources:
           Value: !Ref PrivateSubnet1Name
   PrivateRoute1:
     Type: AWS::EC2::Route
+    DependsOn:
+      - VPNGateway
+      - VPCVGWAttachment
     Properties:
       RouteTableId:
         Ref: VPCPrivateSubnet1RouteTable
@@ -158,6 +161,9 @@ Resources:
           Value: !Ref PrivateSubnet2Name
   PrivateRoute2:
     Type: AWS::EC2::Route
+    DependsOn:
+      - VPNGateway
+      - VPCVGWAttachment
     Properties:
       RouteTableId:
         Ref: VPCPrivateSubnet2RouteTable
@@ -268,6 +274,9 @@ Resources:
   # Virtual Private Gateway Route Propagation
   VPNGatewayRoutePropagationPublicRt:
     Type: AWS::EC2::VPNGatewayRoutePropagation
+    DependsOn:
+      - VPNGateway
+      - VPCVGWAttachment
     Properties:
       RouteTableIds:
         - !Ref VPCPublicSubnetRouteTable
@@ -275,6 +284,9 @@ Resources:
 
   VPNGatewayRoutePropagationPrivateRt1:
     Type: AWS::EC2::VPNGatewayRoutePropagation
+    DependsOn:
+      - VPNGateway
+      - VPCVGWAttachment
     Properties:
       RouteTableIds:
         - !Ref VPCPrivateSubnet1RouteTable
@@ -282,6 +294,9 @@ Resources:
 
   VPNGatewayRoutePropagationPrivateRt2:
     Type: AWS::EC2::VPNGatewayRoutePropagation
+    DependsOn:
+      - VPNGateway
+      - VPCVGWAttachment
     Properties:
       RouteTableIds:
         - !Ref VPCPrivateSubnet2RouteTable
@@ -488,7 +503,7 @@ Resources:
           Value: !Sub "${VPCName}-DWH-EC2"
 
   # Security Group for WebFOCUS
-  WebFOCUSSecurityGroup:
+  WebfocusSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub "${VPCName}-DWH-WEBFOCUS"
@@ -609,6 +624,11 @@ Outputs:
     Value: !Ref DWHSecurityGroup
     Export:
       Name: DatabaseSGId
+  PublicSubnetId:
+    Description: "PublicSubnetId"
+    Value: !Ref VPCPublicSubnet
+    Export:
+      Name: PublicSubnetId
   PrivateSubnet1Id:
     Description: "PrivateSubnet1Id"
     Value: !Ref VPCPrivateSubnet1
@@ -619,3 +639,32 @@ Outputs:
     Value: !Ref VPCPrivateSubnet2
     Export:
       Name: PrivateSubnet2Id
+  WebfocusSecurityGroup:
+    Value: !Ref WebfocusSecurityGroup
+    Export:
+      Name: WebfocusSecurityGroup
+  BastionSecurityGroup:
+    Value: !Ref BastionSecurityGroup
+    Export:
+      Name: BastionSecurityGroup
+  MonitoringSecurityGroup:
+    Value: !Ref MonitoringSecurityGroup
+    Export:
+      Name: MonitoringSecurityGroup
+  EC2SecurityGroup:
+    Value: !Ref EC2SecurityGroup
+    Export:
+      Name: EC2SecurityGroup
+  DWHSecurityGroup:
+    Value: !Ref DWHSecurityGroup
+    Export:
+      Name: DWHSecurityGroup
+  PublicSubnetAZ:
+    Description: AZ of public subnet
+    Value: !Select [0, Fn::GetAZs: ""]
+  PrivateSubnet1AZ:
+    Description: AZ of private subnet 1
+    Value: !Select [1, Fn::GetAZs: ""]
+  PrivateSubnet2AZ:
+    Description: AZ of private subnet 2
+    Value: !Select [2, Fn::GetAZs: ""]

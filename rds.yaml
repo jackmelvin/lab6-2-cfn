@@ -26,18 +26,15 @@ Parameters:
     AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
   DBInstanceClass:
-    Default: db.t2.micro
+    Default: db.m5.large
     Description: DB instance class
     Type: String
     ConstraintDescription: Must select a valid DB instance type.
     AllowedValues:
-      - db.t2.micro
       - db.t3.micro
       - db.t3.small
       - db.t3.medium
-  AvailabilityZone:
-    Description: DB Instance AZ
-    Type: AWS::EC2::AvailabilityZone::Name
+      - db.m5.large
   DBAllocatedStorage:
     Default: "20"
     Description: The size of the database (GiB)
@@ -88,15 +85,13 @@ Resources:
     Properties:
       AllocatedStorage: !Ref DBAllocatedStorage
       AutoMinorVersionUpgrade: false
-      AvailabilityZone: !Ref AvailabilityZone
-      CACertificateIdentifier: rds-ca-2019
       CharacterSetName: JA16SJISTILDE
       DBInstanceClass: !Ref DBInstanceClass
       DBInstanceIdentifier: !Ref DBInstanceID
       DBName: !Ref DBName
       DBParameterGroupName: !Ref DBParameterGroup
       PubliclyAccessible: false
-      DBSubnetGroupName: !Ref DBSubnetGroupName
+      DBSubnetGroupName: !Ref DBSubnetGroup
       DedicatedLogVolume: false
       DeletionProtection: true
       EnableIAMDatabaseAuthentication: false
@@ -105,7 +100,6 @@ Resources:
       EngineLifecycleSupport: String
       EngineVersion: 19.0.0.0.ru-2023-04.rur-2023-04.r1
       LicenseModel: license-included
-      ManageMasterUserPassword: true
       MasterUsername: !Ref DBUsername
       MasterUserPassword: !Ref DBPassword
       MultiAZ: false
@@ -119,7 +113,7 @@ Resources:
         - Key: Name
           Value: !Ref DBName
       VPCSecurityGroups:
-        - !ImportValue DatabaseSG
+        - !ImportValue DatabaseSGId
 
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
@@ -146,9 +140,6 @@ Resources:
       MajorEngineVersion: "19"
       OptionConfigurations:
         - OptionName: Timezone
-          OptionSettings:
-            - Name: TIMEZONE
-              Value: !Ref Timezone
         - OptionName: STATSPACK
       OptionGroupDescription: !Ref DBOptionGroupName
       OptionGroupName: !Ref DBOptionGroupName

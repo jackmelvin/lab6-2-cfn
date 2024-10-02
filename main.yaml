@@ -4,6 +4,7 @@ Description: AWS CloudFormation workshop - Nested stacks - Root template (uksb-1
 
 Parameters:
   S3BucketName:
+    Default: aws-handson-6-2-cfn
     Description: S3 bucket name for the Nested Stacks. S3 bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).
     Type: String
     AllowedPattern: ^(?!(^xn--|.+-s3alias$))^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$
@@ -16,7 +17,11 @@ Parameters:
   VPCName:
     Description: The name of the VPC.
     Type: String
-    Default: cfn-workshop-vpc
+    Default: DWH01-OSAKA
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: lab-4-1-key-pair
 
   VPCCidr:
     Description: The CIDR block for the VPC.
@@ -28,6 +33,7 @@ Parameters:
   PublicSubnetName:
     Type: String
     Description: The name of the public subnet.
+    Default: DWH01-OSAKA-DWH-Prod-EXT-3a
 
   PublicSubnetCidr:
     Description: The CIDR block for the public subnet located in Availability Zone 1.
@@ -39,6 +45,7 @@ Parameters:
   PrivateSubnet1Name:
     Type: String
     Description: The name of the private subnet 1.
+    Default: DWH01-OSAKA-DWH-Prod-INT-3a
 
   PrivateSubnet1Cidr:
     Description: The CIDR block for the public subnet located in Availability Zone 2.
@@ -50,6 +57,7 @@ Parameters:
   PrivateSubnet2Name:
     Type: String
     Description: The name of the private subnet 2.
+    Default: DWH01-OSAKA-DWH-Prod-INT-3c
 
   PrivateSubnet2Cidr:
     Description: The CIDR block for the public subnet located in Availability Zone 2.
@@ -78,15 +86,15 @@ Parameters:
     AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
   DBInstanceClass:
-    Default: db.t2.micro
+    Default: db.m5.large
     Description: DB instance class
     Type: String
     ConstraintDescription: Must select a valid DB instance type.
     AllowedValues:
-      - db.t2.micro
       - db.t3.micro
       - db.t3.small
       - db.t3.medium
+      - db.m5.large
   DBAllocatedStorage:
     Default: "20"
     Description: The size of the database (GiB)
@@ -95,6 +103,7 @@ Parameters:
     MaxValue: "65536"
     ConstraintDescription: must be between 20 and 65536 GiB.
   DBUsername:
+    Default: thuy
     NoEcho: "true"
     Description: Username for MySQL database access
     Type: String
@@ -103,6 +112,7 @@ Parameters:
     AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
   DBPassword:
+    Default: tesT12345678
     NoEcho: "true"
     Description: Password MySQL database access
     Type: String
@@ -119,6 +129,7 @@ Parameters:
     Description: Timezone
     Type: String
   Environment:
+    Default: prod
     Description: Environment
     Type: String
     AllowedValues:
@@ -154,7 +165,6 @@ Resources:
         DBInstanceID: !Ref DBInstanceID
         DBName: !Ref DBName
         DBInstanceClass: !Ref DBInstanceClass
-        AvailabilityZone: !Select [0, !Ref AvailabilityZones]
         DBAllocatedStorage: !Ref DBAllocatedStorage
         DBUsername: !Ref DBUsername
         DBPassword: !Ref DBPassword
@@ -165,19 +175,25 @@ Resources:
         DBOptionGroupName: !Sub "${DBInstanceID}-${Environment}-int"
     DependsOn: VpcStack
 
-  # IamStack:
-  #   Type: AWS::CloudFormation::Stack
-  #   Properties:
-  #     TemplateURL: !Sub https://${S3BucketName}.s3.amazonaws.com/iam.yaml
-  #     TimeoutInMinutes: 10
+  IamStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${S3BucketName}.s3.amazonaws.com/iam.yaml
+      TimeoutInMinutes: 10
 
-  # EC2Stack:
-  #   Type: AWS::CloudFormation::Stack
-  #   Properties:
-  #     TemplateURL: !Sub https://${S3BucketName}.s3.amazonaws.com/ec2.yaml
-  #     TimeoutInMinutes: 20
-  #     Parameters:
-  #       EnvironmentType: !Ref EnvironmentType
-  #       VpcId: !GetAtt VpcStack.Outputs.VpcId
-  #       SubnetId: !GetAtt VpcStack.Outputs.PublicSubnet1
-  #       WebServerInstanceProfile: !GetAtt IamStack.Outputs.WebServerInstanceProfile
+  EC2Stack:
+    DependsOn:
+      - VpcStack
+      - IamStack
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${S3BucketName}.s3.amazonaws.com/ec2.yaml
+      TimeoutInMinutes: 20
+      Parameters:
+        AvailabilityZones: !Sub ${VpcStack.Outputs.PublicSubnetAZ},${VpcStack.Outputs.PrivateSubnet1AZ}
+        # WebfocusSubnetId: !ImportValue PrivateSubnet1Id
+        # BastionHostSubnetId: !ImportValue PublicSubnetId
+        # KeyName: !Ref KeyName
+        # WebfocusSecurityGroup: !ImportValue WebfocusSecurityGroup
+        # BastionSecurityGroup: !ImportValue BastionSecurityGroup
+        # DWHEC2WEBFOCUSRole: !ImportValue DWHEC2WEBFOCUSRole

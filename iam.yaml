@@ -1,0 +1,178 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: AWS CloudFormation workshop - Nested stacks - IAM template.
+
+Parameters:
+  GroupName:
+    Type: String
+    Default: AWSAdministratorGroup
+
+  UserName1:
+    Type: String
+    Default: user1@example.com
+
+  UserName2:
+    Type: String
+    Default: user2@example.com
+
+  UserName3:
+    Type: String
+    Default: user3@example.com
+
+  UserName4:
+    Type: String
+    Default: user4@example.com
+
+  DWHEventBridgeScheduleRoleName:
+    Type: String
+    Default: DWH-EventBridge-Schedule
+
+  DWHEC2WEBFOCUSRoleName:
+    Type: String
+    Default: DWH-EC2-WEBFOCUS
+
+Resources:
+  AWSAdministratorGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Ref GroupName
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+  User1:
+    Type: AWS::IAM::User
+    Properties:
+      LoginProfile:
+        Password: tesT12345678
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/IAMUserChangePassword
+      UserName: !Ref UserName1
+  User2:
+    Type: AWS::IAM::User
+    Properties:
+      LoginProfile:
+        Password: tesT12345678
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/IAMUserChangePassword
+      UserName: !Ref UserName2
+  User3:
+    Type: AWS::IAM::User
+    Properties:
+      Groups:
+        - !Ref AWSAdministratorGroup
+      LoginProfile:
+        Password: tesT12345678
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/IAMUserChangePassword
+      UserName: !Ref UserName3
+  User4:
+    Type: AWS::IAM::User
+    Properties:
+      Groups:
+        - !Ref AWSAdministratorGroup
+      LoginProfile:
+        Password: tesT12345678
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/IAMUserChangePassword
+      UserName: !Ref UserName4
+  CommCreateEC2TagPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: Comm-Create-EC2-Tag
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "ec2:DeleteTags"
+              - "ec2:CreateTags"
+              - "ec2:RunInstances"
+            Resource: "*"
+      Roles:
+        - !Ref DWHEC2WEBFOCUSRole
+  DWHEC2AutoStartStopPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: DWH-EC2-Auto-StartStop
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "ec2:StartInstances"
+              - "ec2:StopInstances"
+            Resource:
+              "*"
+              # - !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/${WebfocusInstanceId}"
+              # - !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance/${BastionHostInstanceId}"
+      Roles:
+        - !Ref DWHEventBridgeScheduleRole
+  DWHRDSAutoStartStopPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: DWH-RDS-Auto-StartStop
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "rds:StopDBInstance"
+              - "rds:StartDBInstance"
+            Resource:
+              "*"
+              # - !Sub "arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:${DBInstanceId}"
+      Roles:
+        - !Ref DWHEventBridgeScheduleRole
+
+  DWHEC2WEBFOCUSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Description: Allows EC2 instances to call AWS services on your behalf.
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+        - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
+      MaxSessionDuration: 3600
+      RoleName: !Ref DWHEC2WEBFOCUSRoleName
+      Tags:
+        - Key: Name
+          Value: !Ref DWHEC2WEBFOCUSRoleName
+
+  DWHEventBridgeScheduleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - scheduler.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      MaxSessionDuration: 3600
+      RoleName: !Ref DWHEventBridgeScheduleRoleName
+      Tags:
+        - Key: Name
+          Value: !Ref DWHEventBridgeScheduleRoleName
+
+Outputs:
+  DWHEC2WEBFOCUSRoleOutput:
+    Description: DWHEC2WEBFOCUSRole
+    Value: !Ref DWHEC2WEBFOCUSRole
+    Export:
+      Name: DWHEC2WEBFOCUSRole
+
+  DWHEventBridgeScheduleRoleOutput:
+    Description: DWHEventBridgeScheduleRole
+    Value: !Ref DWHEventBridgeScheduleRole
+    Export:
+      Name: DWHEventBridgeScheduleRole
